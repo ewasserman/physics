@@ -4,10 +4,11 @@ import { RigidBody } from '../core/body.js';
 import { Constraint } from '../core/constraint.js';
 import { applyGravity } from '../physics/forces.js';
 import { integrateWorld } from '../physics/integrator.js';
-import { detectAllCollisions, detectFloorCollisions } from '../physics/collision.js';
+import { detectAllCollisions, detectFloorCollisions, Contact } from '../physics/collision.js';
 import { resolveContact, resolveContacts } from '../physics/response.js';
 import { resolveConstraints } from '../physics/constraints.js';
 import { SpatialHash } from '../physics/broadphase.js';
+import { captureSnapshot, WorldSnapshot as SnapshotWorldSnapshot } from './snapshot.js';
 
 /** Configuration for the simulation. */
 export interface SimulationConfig {
@@ -42,6 +43,7 @@ export interface Simulation {
   config: SimulationConfig;
   stepCount: number;
   spatialHash: SpatialHash;
+  contacts: Contact[];
 }
 
 /** Create a new simulation with the given config. */
@@ -66,6 +68,7 @@ export function createSimulation(config: Partial<SimulationConfig> = {}): Simula
     config: fullConfig,
     stepCount: 0,
     spatialHash: new SpatialHash(fullConfig.broadphaseCellSize),
+    contacts: [],
   };
 }
 
@@ -76,6 +79,8 @@ export function createSimulation(config: Partial<SimulationConfig> = {}): Simula
 export function step(sim: Simulation): void {
   const subDt = sim.config.dt / sim.config.substeps;
 
+  let lastContacts: Contact[] = [];
+
   for (let i = 0; i < sim.config.substeps; i++) {
     // 1. Apply forces (gravity)
     applyGravity(sim.world);
@@ -85,6 +90,7 @@ export function step(sim: Simulation): void {
 
     // 3. Detect all collisions (floor + body-body)
     const contacts = detectAllCollisions(sim.world, sim.config.floorY, sim.spatialHash);
+    lastContacts = contacts;
 
     // 4. Resolve contacts and constraints (sequential impulse, N iterations)
     resolveContacts(contacts, sim.config.solverIterations);
@@ -115,12 +121,15 @@ export function step(sim: Simulation): void {
     }
   }
 
-  // 7. Advance world time
+  // 7. Store contacts from the last substep
+  sim.contacts = lastContacts;
+
+  // 8. Advance world time
   sim.world.time += sim.config.dt;
   sim.stepCount++;
 }
 
-/** Capture a snapshot of the current simulation state. */
+/** Capture a snapshot of the current simulation state (legacy format). */
 export function getSnapshot(sim: Simulation): WorldSnapshot {
   return {
     time: sim.world.time,
@@ -133,4 +142,9 @@ export function getSnapshot(sim: Simulation): WorldSnapshot {
       angularVelocity: body.angularVelocity,
     })),
   };
+}
+
+/** Capture a full structured snapshot (new format from snapshot.ts). */
+export function getStructuredSnapshot(sim: Simulation): SnapshotWorldSnapshot {
+  return captureSnapshot(sim);
 }
