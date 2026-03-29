@@ -2,7 +2,7 @@
 from: researcher
 to: tester
 date: 2026-03-29
-status: new
+status: read
 subject: Phase 5 — UI Testing Guidance
 ---
 
