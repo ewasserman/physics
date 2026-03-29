@@ -2,6 +2,8 @@ import { Vec2 } from '../math/vec2.js';
 import { RigidBody } from '../core/body.js';
 import { World } from '../core/world.js';
 import { ShapeType } from '../core/shape.js';
+import { SpatialHash } from './broadphase.js';
+import { detectCollision } from './narrowphase.js';
 
 /** Contact information from a collision detection. */
 export interface Contact {
@@ -83,6 +85,37 @@ export function detectFloorCollisions(world: World, floorY: number): Contact[] {
       // Polygon floor collision not implemented in Phase 1
     }
 
+    if (contact) {
+      contacts.push(contact);
+    }
+  }
+
+  return contacts;
+}
+
+/**
+ * Detect all collisions: floor + body-body (broad-phase + narrow-phase).
+ */
+export function detectAllCollisions(
+  world: World,
+  floorY: number,
+  spatialHash: SpatialHash,
+): Contact[] {
+  // 1. Floor collisions
+  const contacts = detectFloorCollisions(world, floorY);
+
+  // 2. Broad-phase: rebuild spatial hash
+  spatialHash.clear();
+  for (const body of world.bodies) {
+    spatialHash.insert(body);
+  }
+
+  // 3. Narrow-phase on candidate pairs
+  const pairs = spatialHash.getPotentialPairs();
+  for (const [a, b] of pairs) {
+    // Skip if both are static
+    if (a.isStatic && b.isStatic) continue;
+    const contact = detectCollision(a, b);
     if (contact) {
       contacts.push(contact);
     }

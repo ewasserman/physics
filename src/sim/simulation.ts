@@ -3,8 +3,9 @@ import { World, createWorld, CreateWorldOptions } from '../core/world.js';
 import { RigidBody } from '../core/body.js';
 import { applyGravity } from '../physics/forces.js';
 import { integrateWorld } from '../physics/integrator.js';
-import { detectFloorCollisions } from '../physics/collision.js';
-import { resolveContact } from '../physics/response.js';
+import { detectAllCollisions, detectFloorCollisions } from '../physics/collision.js';
+import { resolveContact, resolveContacts } from '../physics/response.js';
+import { SpatialHash } from '../physics/broadphase.js';
 
 /** Configuration for the simulation. */
 export interface SimulationConfig {
@@ -12,6 +13,9 @@ export interface SimulationConfig {
   gravity: Vec2;
   floorY: number;
   substeps: number;
+  broadphaseCellSize: number;
+  solverIterations: number;
+  damping: number;
 }
 
 /** A snapshot of a single body's state. */
@@ -35,6 +39,7 @@ export interface Simulation {
   world: World;
   config: SimulationConfig;
   stepCount: number;
+  spatialHash: SpatialHash;
 }
 
 /** Create a new simulation with the given config. */
@@ -44,6 +49,9 @@ export function createSimulation(config: Partial<SimulationConfig> = {}): Simula
     gravity: config.gravity ?? new Vec2(0, -9.81),
     floorY: config.floorY ?? 0,
     substeps: config.substeps ?? 1,
+    broadphaseCellSize: config.broadphaseCellSize ?? 2,
+    solverIterations: config.solverIterations ?? 8,
+    damping: config.damping ?? 0,
   };
 
   const world = createWorld({
@@ -55,6 +63,7 @@ export function createSimulation(config: Partial<SimulationConfig> = {}): Simula
     world,
     config: fullConfig,
     stepCount: 0,
+    spatialHash: new SpatialHash(fullConfig.broadphaseCellSize),
   };
 }
 
@@ -72,16 +81,25 @@ export function step(sim: Simulation): void {
     // 2. Integrate all bodies
     integrateWorld(sim.world, subDt);
 
-    // 3. Detect collisions with floor
-    const contacts = detectFloorCollisions(sim.world, sim.config.floorY);
+    // 3. Detect all collisions (floor + body-body)
+    const contacts = detectAllCollisions(sim.world, sim.config.floorY, sim.spatialHash);
 
-    // 4. Resolve collisions
-    for (const contact of contacts) {
-      resolveContact(contact);
+    // 4. Resolve contacts (sequential impulse, N iterations)
+    resolveContacts(contacts, sim.config.solverIterations);
+
+    // 5. Apply damping
+    if (sim.config.damping > 0) {
+      const factor = 1 - sim.config.damping;
+      for (const body of sim.world.bodies) {
+        if (!body.isStatic) {
+          body.velocity = body.velocity.scale(factor);
+          body.angularVelocity *= factor;
+        }
+      }
     }
   }
 
-  // 5. Advance world time
+  // 6. Advance world time
   sim.world.time += sim.config.dt;
   sim.stepCount++;
 }
