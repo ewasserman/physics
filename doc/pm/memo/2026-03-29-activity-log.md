@@ -193,6 +193,15 @@ Web visualization working. 408 tests. `npm run dev` serves interactive viewer.
 - No researcher needed (perturbation UI research done in Phase 5)
 - Developer only, then tester follows
 
+### 13:15 — Developer Phase 6 Complete, merged. 425 tests.
+### 13:19 — Tester Phase 6 Complete. 466 tests. Merged.
+
+### PHASE 6 COMPLETE
+Interactive perturbations: force application, joint breaking, object dropping, perturbation logging.
+
+### 13:20 — Phase 7 Kickoff — FINAL PHASE
+Launching developer (polish + performance) and researcher (documentation) in parallel.
+
 ### Dependency Graph (Phase 0)
 ```
 Researcher ──────────────────────────┐
