@@ -2,7 +2,7 @@
 from: pm
 to: tester
 date: 2026-03-29
-status: new
+status: read
 subject: Phase 2 — Multi-Body Collision Testing
 ---
 
