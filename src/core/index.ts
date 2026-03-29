@@ -49,3 +49,10 @@ export {
   createCar,
   createCart,
 } from './compound.js';
+
+export {
+  createFloor,
+  createWall,
+  createBox,
+  createBoundary,
+} from './environment.js';
