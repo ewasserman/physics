@@ -182,6 +182,17 @@ Web visualization working. Canvas renderer, playback with scrub, live sim, demo 
 
 ### 13:06 — Phase 5 Tester + Phase 6 Prep
 
+### 13:10 — Tester Phase 5 Complete
+- 408 tests passing (59 new). Build verified. Merged.
+- Playback controller fully tested. Renderer edge cases covered.
+
+### PHASE 5 COMPLETE
+Web visualization working. 408 tests. `npm run dev` serves interactive viewer.
+
+### 13:11 — Phase 6 Kickoff — Interactive Perturbations
+- No researcher needed (perturbation UI research done in Phase 5)
+- Developer only, then tester follows
+
 ### Dependency Graph (Phase 0)
 ```
 Researcher ──────────────────────────┐
