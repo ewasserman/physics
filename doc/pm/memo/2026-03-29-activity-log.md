@@ -155,6 +155,12 @@ Compound objects working. Constraint solver (distance, revolute, fixed), Coulomb
 ### 12:46 — Phase 4 Kickoff
 Environment + structured output for AI training data
 
+### 12:48 — Researcher Phase 4 Complete, merged
+- Data schema analysis: JSON for prototype, 60Hz capture, comparison to PHYRE/IntPhys/CoPhy
+### 12:52 — Developer Phase 4 Complete
+- Environment (floor/wall/boundary), scene builder, snapshot system, recording with JSON export
+- 307 tests passing (35 new). Merged.
+
 ### Dependency Graph (Phase 0)
 ```
 Researcher ──────────────────────────┐
