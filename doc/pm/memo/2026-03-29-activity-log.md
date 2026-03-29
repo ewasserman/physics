@@ -136,6 +136,12 @@ Multi-body collisions working. 223 tests. Core physics issues documented for lat
 ### 12:35 — Phase 3 Kickoff
 Launching agents for compound objects + constraints (joints, axles)
 
+### 12:38 — Researcher Phase 3 Complete, merged
+### 12:40 — Developer Phase 3 Complete
+- Constraint solver (distance, revolute, fixed), Coulomb friction, compound objects (car, cart)
+- 246 tests passing (23 new). Merged to main.
+- Launching tester Phase 3
+
 ### Dependency Graph (Phase 0)
 ```
 Researcher ──────────────────────────┐
