@@ -4,3 +4,5 @@ export { type Contact, detectCircleFloor, detectAABBFloor, detectFloorCollisions
 export { resolveContact, resolveContacts } from './response.js';
 export { SpatialHash, computeAABB } from './broadphase.js';
 export { detectCollision, circleVsCircle, circleVsAABB, aabbVsAABB } from './narrowphase.js';
+export { resolveConstraint, resolveConstraints } from './constraints.js';
+export { applyFriction } from './friction.js';

@@ -1,10 +1,12 @@
 import { Vec2 } from '../math/vec2.js';
-import { World, createWorld, CreateWorldOptions } from '../core/world.js';
+import { World, createWorld, CreateWorldOptions, removeConstraint } from '../core/world.js';
 import { RigidBody } from '../core/body.js';
+import { Constraint } from '../core/constraint.js';
 import { applyGravity } from '../physics/forces.js';
 import { integrateWorld } from '../physics/integrator.js';
 import { detectAllCollisions, detectFloorCollisions } from '../physics/collision.js';
 import { resolveContact, resolveContacts } from '../physics/response.js';
+import { resolveConstraints } from '../physics/constraints.js';
 import { SpatialHash } from '../physics/broadphase.js';
 
 /** Configuration for the simulation. */
@@ -84,10 +86,24 @@ export function step(sim: Simulation): void {
     // 3. Detect all collisions (floor + body-body)
     const contacts = detectAllCollisions(sim.world, sim.config.floorY, sim.spatialHash);
 
-    // 4. Resolve contacts (sequential impulse, N iterations)
+    // 4. Resolve contacts and constraints (sequential impulse, N iterations)
     resolveContacts(contacts, sim.config.solverIterations);
 
-    // 5. Apply damping
+    // 5. Resolve constraints
+    if (sim.world.constraints.length > 0) {
+      const broken = resolveConstraints(
+        sim.world.constraints,
+        sim.config.solverIterations,
+        subDt,
+      );
+
+      // Remove broken constraints from the world
+      for (const constraint of broken) {
+        removeConstraint(sim.world, constraint);
+      }
+    }
+
+    // 6. Apply damping
     if (sim.config.damping > 0) {
       const factor = 1 - sim.config.damping;
       for (const body of sim.world.bodies) {
@@ -99,7 +115,7 @@ export function step(sim: Simulation): void {
     }
   }
 
-  // 6. Advance world time
+  // 7. Advance world time
   sim.world.time += sim.config.dt;
   sim.stepCount++;
 }

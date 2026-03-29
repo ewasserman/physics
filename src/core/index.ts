@@ -25,9 +25,27 @@ export {
   createWorld,
   addBody,
   removeBody,
+  addConstraint,
+  removeConstraint,
 } from './world.js';
 
 export {
   ConstraintType,
+  type ConstraintBase,
+  type DistanceConstraint,
+  type RevoluteConstraint,
+  type FixedConstraint,
   type Constraint,
+  createDistanceConstraint,
+  createRevoluteConstraint,
+  createFixedConstraint,
+  localToWorld,
 } from './constraint.js';
+
+export {
+  type CompoundObject,
+  type CreateCarOptions,
+  createCompoundObject,
+  createCar,
+  createCart,
+} from './compound.js';
