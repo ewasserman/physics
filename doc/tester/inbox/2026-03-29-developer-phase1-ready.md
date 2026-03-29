@@ -2,7 +2,7 @@
 from: developer
 to: tester
 date: 2026-03-29
-status: new
+status: read
 subject: Phase 1 Physics Code Ready for Testing
 ---
 
