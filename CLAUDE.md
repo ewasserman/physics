@@ -37,3 +37,40 @@ A from-scratch physical object simulation system. Compound objects are built fro
 - Approximate physics is fine; visual plausibility over exactness
 - Performance matters — the sim must run faster than real-time
 - Output structured state snapshots for AI training consumption
+
+## Architecture Summary
+
+### Core (`src/core/`)
+- **`body.ts`** — `RigidBody` interface and `createRigidBody()` factory. Bodies have position, velocity, angle, angular velocity, mass, shape, restitution, friction.
+- **`shape.ts`** — Shape types: `Circle`, `AABB`, `Polygon`. Factory functions `createCircle()`, `createAABB()`, `createPolygon()`. Inertia computation.
+- **`world.ts`** — `World` container holding bodies, constraints, gravity, and time. `addBody()`, `addConstraint()`, `removeConstraint()`.
+- **`constraint.ts`** — `Constraint` interface with revolute joints. Supports breaking threshold.
+- **`compound.ts`** — Compound objects (e.g., `createCar()`) — multiple bodies connected by constraints.
+- **`environment.ts`** — Static environment builders: `createFloor()`, `createWall()`, `createBoundary()`, `createBox()`.
+
+### Math (`src/math/`)
+- **`vec2.ts`** — Immutable 2D vector class with add, sub, scale, dot, cross, normalize, rotate, etc.
+
+### Physics (`src/physics/`)
+- **`integrator.ts`** — Symplectic Euler integration with velocity cap (`MAX_SPEED=200`, `MAX_ANGULAR_SPEED=50`) to prevent tunneling.
+- **`forces.ts`** — Gravity application.
+- **`broadphase.ts`** — `SpatialHash` using numeric hash keys for fast broad-phase collision detection. Includes `computeAABB()` and `aabbOverlap()`.
+- **`narrowphase.ts`** — Circle-circle, circle-AABB, AABB-AABB collision detection with AABB pre-check before detailed tests.
+- **`collision.ts`** — Floor collision detection and `detectAllCollisions()` orchestrator.
+- **`response.ts`** — Sequential impulse solver with Baumgarte stabilization (scale=0.1), velocity-level correction for body-body contacts, and warm-starting support via `ContactCache`.
+- **`warmstart.ts`** — `ContactCache` class that stores per-frame impulses keyed by body pair for warm-starting the solver.
+- **`constraints.ts`** — Iterative constraint solver (position-based) with break detection.
+- **`friction.ts`** — Coulomb friction model applied during collision response.
+
+### Simulation (`src/sim/`)
+- **`simulation.ts`** — Top-level `Simulation` interface with `createSimulation()` and `step()`. Manages substeps, broadphase, solver, warm-starting, and damping. `SimulationConfig` exposes dt, gravity, floorY, substeps, solverIterations, damping, broadphaseCellSize.
+- **`scene.ts`** — Declarative scene builder from `SceneConfig` with object types: car, circle, box, static-box, wall.
+- **`recording.ts`** — `SimulationRecorder` for capturing snapshots at configurable intervals. Exports to JSON.
+- **`snapshot.ts`** — Serializable world state snapshots (bodies, constraints, contacts) for JSON export.
+- **`perturbation.ts`** — Runtime perturbation system (apply forces, break constraints, drop bodies).
+
+### Visualization (`src/viz/`)
+- Web-based HTML5 Canvas visualization with playback controls.
+
+### Tests (`tests/`)
+- 475 tests covering unit tests, validation scenarios, stress tests, stacking stability, tunneling prevention, and full integration.

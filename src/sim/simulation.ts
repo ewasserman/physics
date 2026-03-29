@@ -8,6 +8,7 @@ import { detectAllCollisions, detectFloorCollisions, Contact } from '../physics/
 import { resolveContact, resolveContacts } from '../physics/response.js';
 import { resolveConstraints } from '../physics/constraints.js';
 import { SpatialHash } from '../physics/broadphase.js';
+import { ContactCache } from '../physics/warmstart.js';
 import { captureSnapshot, WorldSnapshot as SnapshotWorldSnapshot } from './snapshot.js';
 
 /** Configuration for the simulation. */
@@ -44,6 +45,7 @@ export interface Simulation {
   stepCount: number;
   spatialHash: SpatialHash;
   contacts: Contact[];
+  contactCache: ContactCache;
 }
 
 /** Create a new simulation with the given config. */
@@ -69,6 +71,7 @@ export function createSimulation(config: Partial<SimulationConfig> = {}): Simula
     stepCount: 0,
     spatialHash: new SpatialHash(fullConfig.broadphaseCellSize),
     contacts: [],
+    contactCache: new ContactCache(),
   };
 }
 
@@ -78,6 +81,7 @@ export function createSimulation(config: Partial<SimulationConfig> = {}): Simula
  */
 export function step(sim: Simulation): void {
   const subDt = sim.config.dt / sim.config.substeps;
+  const damping = sim.config.damping > 0 ? (1 - sim.config.damping) : 0.999;
 
   let lastContacts: Contact[] = [];
 
@@ -85,15 +89,16 @@ export function step(sim: Simulation): void {
     // 1. Apply forces (gravity)
     applyGravity(sim.world);
 
-    // 2. Integrate all bodies
-    integrateWorld(sim.world, subDt);
+    // 2. Integrate all bodies (damping passed through)
+    integrateWorld(sim.world, subDt, damping);
 
     // 3. Detect all collisions (floor + body-body)
     const contacts = detectAllCollisions(sim.world, sim.config.floorY, sim.spatialHash);
     lastContacts = contacts;
 
     // 4. Resolve contacts and constraints (sequential impulse, N iterations)
-    resolveContacts(contacts, sim.config.solverIterations);
+    // Pass contact cache for warm-starting and dt for velocity-level correction
+    resolveContacts(contacts, sim.config.solverIterations, subDt, sim.contactCache);
 
     // 5. Resolve constraints
     if (sim.world.constraints.length > 0) {
@@ -108,23 +113,12 @@ export function step(sim: Simulation): void {
         removeConstraint(sim.world, constraint);
       }
     }
-
-    // 6. Apply damping
-    if (sim.config.damping > 0) {
-      const factor = 1 - sim.config.damping;
-      for (const body of sim.world.bodies) {
-        if (!body.isStatic) {
-          body.velocity = body.velocity.scale(factor);
-          body.angularVelocity *= factor;
-        }
-      }
-    }
   }
 
-  // 7. Store contacts from the last substep
+  // 6. Store contacts from the last substep
   sim.contacts = lastContacts;
 
-  // 8. Advance world time
+  // 7. Advance world time
   sim.world.time += sim.config.dt;
   sim.stepCount++;
 }

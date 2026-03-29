@@ -1,8 +1,9 @@
 import { Vec2 } from '../math/vec2.js';
 import { Contact } from './collision.js';
+import { ContactCache } from './warmstart.js';
 
 const BAUMGARTE_SLOP = 0.01;
-const BAUMGARTE_SCALE = 0.2;
+const BAUMGARTE_SCALE = 0.1;
 
 /**
  * Resolve a single contact using impulse-based collision response.
@@ -11,8 +12,10 @@ const BAUMGARTE_SCALE = 0.2;
  * Convention:
  * - Floor contacts: normal points upward (toward bodyA, away from floor). bodyB is null.
  * - Body-body contacts: normal points from bodyA toward bodyB.
+ *
+ * Returns the computed impulse magnitude for warm-starting caching.
  */
-export function resolveContact(contact: Contact): void {
+export function resolveContact(contact: Contact, dt: number = 1 / 60): number {
   const { bodyA, bodyB, normal, penetration, point } = contact;
 
   const rA = point.sub(bodyA.position);
@@ -41,11 +44,11 @@ export function resolveContact(contact: Contact): void {
     // ─── Floor contact ───
     // Normal points toward bodyA (upward). Body approaching if vAp.dot(normal) < 0.
     const vn = vAp.dot(normal);
-    if (vn > 0) return;
+    if (vn > 0) return 0;
 
     const rACrossN = rA.cross(normal);
     const effectiveMass = invMassA + rACrossN * rACrossN * invInertiaA;
-    if (effectiveMass <= 0) return;
+    if (effectiveMass <= 0) return 0;
 
     const j = -(1 + e) * vn / effectiveMass;
     const impulse = normal.scale(j);
@@ -58,12 +61,14 @@ export function resolveContact(contact: Contact): void {
     if (penetration > 0 && invMassA > 0) {
       bodyA.position = bodyA.position.add(normal.scale(penetration));
     }
+
+    return j;
   } else {
     // ─── Body-body contact ───
     // Normal points from A to B. vRel = vB - vA. Separating if vn > 0.
     const vRel = vBp.sub(vAp);
     const vn = vRel.dot(normal);
-    if (vn > 0) return;
+    if (vn > 0) return 0;
 
     const rACrossN = rA.cross(normal);
     const rBCrossN = rB.cross(normal);
@@ -71,9 +76,13 @@ export function resolveContact(contact: Contact): void {
       invMassA + invMassB +
       rACrossN * rACrossN * invInertiaA +
       rBCrossN * rBCrossN * invInertiaB;
-    if (effectiveMass <= 0) return;
+    if (effectiveMass <= 0) return 0;
 
-    const j = -(1 + e) * vn / effectiveMass;
+    // Velocity bias: gently push apart penetrating bodies at velocity level.
+    // Uses a small fixed scale (not divided by dt) to avoid injecting energy.
+    const vBias = Math.max(penetration - BAUMGARTE_SLOP, 0) * BAUMGARTE_SCALE;
+
+    const j = (-(1 + e) * vn + vBias) / effectiveMass;
     const impulse = normal.scale(j);
 
     // A gets pushed opposite to normal, B gets pushed along normal
@@ -99,17 +108,74 @@ export function resolveContact(contact: Contact): void {
         }
       }
     }
+
+    return j;
+  }
+}
+
+/**
+ * Apply warm-start impulses to contacts from cached values.
+ * This provides a better initial guess for the solver iterations.
+ */
+function applyWarmStart(contacts: Contact[], cache: ContactCache): void {
+  for (const contact of contacts) {
+    const { bodyA, bodyB, normal, point } = contact;
+    const bId = bodyB ? bodyB.id : -1;
+    const cachedImpulse = cache.retrieve(bodyA.id, bId);
+    if (cachedImpulse === 0) continue;
+
+    // Apply a fraction of the cached impulse (50% for stability)
+    const warmFactor = 0.5;
+    const j = cachedImpulse * warmFactor;
+    const impulse = normal.scale(j);
+
+    const rA = point.sub(bodyA.position);
+
+    if (bodyB === null) {
+      // Floor contact
+      bodyA.velocity = bodyA.velocity.add(impulse.scale(bodyA.inverseMass));
+      bodyA.angularVelocity += rA.cross(impulse) * bodyA.inverseInertia;
+    } else {
+      const rB = point.sub(bodyB.position);
+      bodyA.velocity = bodyA.velocity.sub(impulse.scale(bodyA.inverseMass));
+      bodyA.angularVelocity -= rA.cross(impulse) * bodyA.inverseInertia;
+      if (!bodyB.isStatic) {
+        bodyB.velocity = bodyB.velocity.add(impulse.scale(bodyB.inverseMass));
+        bodyB.angularVelocity += rB.cross(impulse) * bodyB.inverseInertia;
+      }
+    }
   }
 }
 
 /**
  * Sequential impulse solver: iterate over all contacts multiple times
  * to converge to a stable solution.
+ *
+ * Supports optional warm-starting via ContactCache and passes dt
+ * for velocity-level Baumgarte correction.
  */
-export function resolveContacts(contacts: Contact[], iterations: number = 8): void {
+export function resolveContacts(
+  contacts: Contact[],
+  iterations: number = 8,
+  dt: number = 1 / 60,
+  cache?: ContactCache,
+): void {
+  // Apply warm-start impulses if cache is provided
+  if (cache) {
+    applyWarmStart(contacts, cache);
+  }
+
+  const impulses = new Array<number>(contacts.length).fill(0);
+
   for (let i = 0; i < iterations; i++) {
-    for (const contact of contacts) {
-      resolveContact(contact);
+    for (let c = 0; c < contacts.length; c++) {
+      const j = resolveContact(contacts[c], dt);
+      impulses[c] += j;
     }
+  }
+
+  // Store impulses in cache for next frame's warm-start
+  if (cache) {
+    cache.store(contacts, impulses);
   }
 }
