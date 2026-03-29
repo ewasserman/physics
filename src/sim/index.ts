@@ -29,3 +29,11 @@ export {
   SimulationRecorder,
   createRecorder,
 } from './recording.js';
+
+export {
+  type Perturbation,
+  type ForceDetails,
+  type BreakDetails,
+  type DropDetails,
+  PerturbationLog,
+} from './perturbation.js';

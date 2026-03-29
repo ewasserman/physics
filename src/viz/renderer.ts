@@ -317,4 +317,82 @@ export class CanvasRenderer {
   setShowGrid(show: boolean): void {
     this.config.showGrid = show;
   }
+
+  /** Get the current camera zoom (pixels per world-unit). */
+  getZoom(): number {
+    return this.cameraZoom;
+  }
+
+  /**
+   * Draw an arrow from world-space start to world-space end.
+   * Used for force visualization during drag interactions.
+   */
+  drawArrow(
+    startWX: number, startWY: number,
+    endWX: number, endWY: number,
+    color = '#ff6600',
+    lineWidth = 3,
+  ): void {
+    const ctx = this.ctx;
+    const start = this.worldToScreen(startWX, startWY);
+    const end = this.worldToScreen(endWX, endWY);
+
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len < 2) return;
+
+    const angle = Math.atan2(dy, dx);
+    const headLen = Math.min(14, len * 0.3);
+
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = lineWidth;
+
+    // Shaft
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+
+    // Arrowhead
+    ctx.beginPath();
+    ctx.moveTo(end.x, end.y);
+    ctx.lineTo(
+      end.x - headLen * Math.cos(angle - Math.PI / 6),
+      end.y - headLen * Math.sin(angle - Math.PI / 6),
+    );
+    ctx.lineTo(
+      end.x - headLen * Math.cos(angle + Math.PI / 6),
+      end.y - headLen * Math.sin(angle + Math.PI / 6),
+    );
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  /**
+   * Draw a highlighted constraint line (thicker, colored) between two world positions.
+   */
+  drawHighlightedConstraint(
+    ax: number, ay: number,
+    bx: number, by: number,
+    color = '#ff8800',
+    lineWidth = 4,
+  ): void {
+    const ctx = this.ctx;
+    const posA = this.worldToScreen(ax, ay);
+    const posB = this.worldToScreen(bx, by);
+
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = lineWidth;
+    ctx.beginPath();
+    ctx.moveTo(posA.x, posA.y);
+    ctx.lineTo(posB.x, posB.y);
+    ctx.stroke();
+    ctx.restore();
+  }
 }

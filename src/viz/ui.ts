@@ -1,5 +1,7 @@
 import { PlaybackController } from './playback.js';
 import { LiveSimulation } from './live.js';
+import { InteractionTool } from './interaction.js';
+import type { DropObjectType } from './interaction.js';
 
 export type UIMode = 'live' | 'playback';
 
@@ -14,6 +16,9 @@ export interface UIControls {
   onSeek: (frame: number) => void;
   onSpeedChange: (speed: number) => void;
   onDebugToggle: (show: boolean) => void;
+  onToolChange: (tool: InteractionTool) => void;
+  onDropTypeChange: (type: DropObjectType) => void;
+  setActiveTool: (tool: InteractionTool) => void;
 }
 
 /**
@@ -81,6 +86,37 @@ export function createControls(): UIControls {
   debugLabel.appendChild(debugCheck);
   debugLabel.appendChild(document.createTextNode('Debug'));
 
+  // --- Tool selector ---
+  const toolGroup = document.createElement('div');
+  toolGroup.style.cssText = 'display: flex; gap: 2px; margin-left: 8px; border-left: 1px solid #555; padding-left: 8px;';
+
+  const toolButtons: Record<InteractionTool, HTMLButtonElement> = {} as any;
+  const tools: Array<{ tool: InteractionTool; label: string }> = [
+    { tool: InteractionTool.Select, label: 'Select' },
+    { tool: InteractionTool.ApplyForce, label: 'Force' },
+    { tool: InteractionTool.BreakJoint, label: 'Break' },
+    { tool: InteractionTool.DropObject, label: 'Drop' },
+  ];
+
+  for (const { tool, label } of tools) {
+    const btn = document.createElement('button');
+    btn.textContent = label;
+    btn.dataset.tool = tool;
+    btn.style.cssText = toolBtnStyle(tool === InteractionTool.Select);
+    toolGroup.appendChild(btn);
+    toolButtons[tool] = btn;
+  }
+
+  // Drop object type selector
+  const dropTypeSelect = document.createElement('select');
+  dropTypeSelect.style.cssText = 'background: #444; color: #eee; border: 1px solid #666; padding: 2px 4px; border-radius: 3px; margin-left: 4px;';
+  for (const t of ['circle', 'box'] as DropObjectType[]) {
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+    dropTypeSelect.appendChild(opt);
+  }
+
   container.appendChild(playBtn);
   container.appendChild(stopBtn);
   container.appendChild(stepBtn);
@@ -89,8 +125,18 @@ export function createControls(): UIControls {
   container.appendChild(speedSelect);
   container.appendChild(scrubber);
   container.appendChild(debugLabel);
+  container.appendChild(toolGroup);
+  container.appendChild(dropTypeSelect);
 
   let isPlaying = false;
+
+  let activeTool = InteractionTool.Select;
+
+  function updateToolButtons(): void {
+    for (const { tool } of tools) {
+      toolButtons[tool].style.cssText = toolBtnStyle(tool === activeTool);
+    }
+  }
 
   const controls: UIControls = {
     container,
@@ -101,6 +147,13 @@ export function createControls(): UIControls {
     onSeek: () => {},
     onSpeedChange: () => {},
     onDebugToggle: () => {},
+    onToolChange: () => {},
+    onDropTypeChange: () => {},
+
+    setActiveTool(tool: InteractionTool) {
+      activeTool = tool;
+      updateToolButtons();
+    },
 
     update(frame: number, totalFrames: number, time: number) {
       frameLabel.textContent = `Frame ${frame} / ${totalFrames}`;
@@ -147,9 +200,27 @@ export function createControls(): UIControls {
     controls.onDebugToggle(debugCheck.checked);
   });
 
+  for (const { tool } of tools) {
+    toolButtons[tool].addEventListener('click', () => {
+      activeTool = tool;
+      updateToolButtons();
+      controls.onToolChange(tool);
+    });
+  }
+
+  dropTypeSelect.addEventListener('change', () => {
+    controls.onDropTypeChange(dropTypeSelect.value as DropObjectType);
+  });
+
   return controls;
 }
 
 function btnStyle(): string {
   return 'background: #555; color: #eee; border: 1px solid #777; padding: 4px 12px; border-radius: 3px; cursor: pointer; font-family: monospace;';
+}
+
+function toolBtnStyle(active: boolean): string {
+  const bg = active ? '#4a90d9' : '#555';
+  const border = active ? '#6ab0ff' : '#777';
+  return `background: ${bg}; color: #eee; border: 1px solid ${border}; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-family: monospace; font-size: 12px;`;
 }
