@@ -2,7 +2,7 @@
 from: pm
 to: researcher
 date: 2026-03-29
-status: new
+status: read
 subject: Phase 5 — Visualization UX Research
 ---
 
