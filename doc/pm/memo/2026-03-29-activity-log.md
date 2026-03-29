@@ -171,6 +171,17 @@ Environment + AI training data output working. Scene builder, snapshot, recordin
 
 ### 12:56 — Phase 5 Kickoff — Visualization
 
+### 13:00 — Researcher Phase 5 Complete, merged (UX patterns + perturbation UI research)
+### 13:05 — Developer Phase 5 Complete
+- Full web viz: Canvas renderer, playback controller, live sim, UI controls, 3 demo scenes, index.html
+- 349 tests passing (18 new renderer smoke tests). Merged.
+- `npm run dev` should now serve the visualization!
+
+### PHASE 5 COMPLETE
+Web visualization working. Canvas renderer, playback with scrub, live sim, demo scenes.
+
+### 13:06 — Phase 5 Tester + Phase 6 Prep
+
 ### Dependency Graph (Phase 0)
 ```
 Researcher ──────────────────────────┐
