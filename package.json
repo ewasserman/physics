@@ -1,0 +1,17 @@
+{
+  "name": "physics-sim",
+  "version": "0.1.0",
+  "description": "From-scratch rigid-body physics simulation",
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0",
+    "vitest": "^3.0.0"
+  }
+}
