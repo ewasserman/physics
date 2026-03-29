@@ -2,6 +2,7 @@ import { Vec2 } from '../math/vec2.js';
 import { RigidBody } from '../core/body.js';
 import { ShapeType } from '../core/shape.js';
 import { Contact } from './collision.js';
+import { computeAABB, aabbOverlap } from './broadphase.js';
 
 /**
  * Detect collision between two circles.
@@ -123,6 +124,11 @@ export function aabbVsAABB(a: RigidBody, b: RigidBody): Contact | null {
 
 /** Dispatch table for collision detection between two bodies. */
 export function detectCollision(a: RigidBody, b: RigidBody): Contact | null {
+  // AABB pre-check: skip detailed test if bounding boxes don't overlap
+  const aabbA = computeAABB(a);
+  const aabbB = computeAABB(b);
+  if (!aabbOverlap(aabbA, aabbB)) return null;
+
   const tA = a.shape.type;
   const tB = b.shape.type;
 
