@@ -161,6 +161,16 @@ Environment + structured output for AI training data
 - Environment (floor/wall/boundary), scene builder, snapshot system, recording with JSON export
 - 307 tests passing (35 new). Merged.
 
+### 12:55 — Tester Phase 4 Complete
+- 331 tests passing (24 new). Merged.
+- Environment, recording, snapshot round-trip, scene builder all validated.
+- Recording: bouncing ball ~100KB, two cars ~600KB, settling scene ~1.2MB. All reasonable.
+
+### PHASE 4 COMPLETE
+Environment + AI training data output working. Scene builder, snapshot, recording with JSON export.
+
+### 12:56 — Phase 5 Kickoff — Visualization
+
 ### Dependency Graph (Phase 0)
 ```
 Researcher ──────────────────────────┐
