@@ -105,6 +105,19 @@ Single rigid body dynamics fully implemented and validated:
 ### 12:18 — Phase 2 Kickoff
 Launching all three agents for Phase 2: Multi-Body Collisions
 
+### 12:20 — Researcher Phase 2 Complete
+- Delivered multi-body test cases (5 scenarios) + performance scaling analysis
+- Merged to main (fast-forward)
+
+### 12:25 — Developer Phase 2 Complete
+- Implemented: SpatialHash broad-phase, circle-circle/circle-AABB/AABB-AABB narrow-phase, sequential impulse solver with Baumgarte stabilization
+- 198 tests passing (23 new). Merged to main.
+- Performance still strong: 5,802x real-time for single body
+
+### 12:25 — Tester Phase 2 Launched
+- Validating multi-body collisions against researcher's analytical test cases
+- Momentum conservation, energy, stacking stability, performance scaling
+
 ### Dependency Graph (Phase 0)
 ```
 Researcher ──────────────────────────┐
