@@ -1,0 +1,20 @@
+we are going to start a new project to be developed by a team of agents. Initially the team will start with a project-manager agent ("PM" for short), a developer agent, a researcher agent, and a tester agent. Each will keep notes for iteself under a
+doc/<agent>/memo directory. We should also have a doc/<agent>/inbox where another agent (or the humans) can put inputs for the agent.
+
+The project is to develop a physical object simulation system built from scratch (not just a library we find). The objects modelable by the library should start simple with idealized representations (e.g. 4 discs with two zero-friction axles through a
+rectangular prism makes a "car"). The goal is to be able to simulate a number of compound objects of this type, in an environment (e.g. floor, walls, buildings), allow for external forces (e.g. gravity, or a "nudge" by a user) to act on the objects, and for
+the objects to interact with each other and the environment (cars bump into each other and the walls). The physics of the interactions will be idealized as is prudent (simple models of friction, elasticity, etc) and approximate (e.g. numerical
+approximations). The idea is to produce something that looks realistic to an observer but efficient and speedy. The purpose of the model simulation is to produce data for training AI's to deal with physical objects. Therefore the model needs to produce at any
+ instant the configuration of the system and its dynamical variables. What exactly these are is part of the design of the probject but the point is to be able to take observations of the real world (e.g. a video) and build a model from them with initial
+values of the dynamical model and have the model be able to simulate what happens next.
+
+We will want way to visualize the model simulation runs (eg. a web canvas that allows playing the a "movie" and perhaps scrubing back and forth). The UI should also facilitate applying external perturbations to the objects (e.g. what happens at this point if
+the axle on this wheel breaks off; what if i drop a 50lb sack of sand on it here).
+
+For now you are the PM. I want you to come up with a plan for how this should be carried out. All the development, research, testing, etc. will be carried out by the agents. The agent communications need to be considered. All of the code and documents are to
+be restricted to the git repo in the cwd (/Users/ewasserman/dev/ewasserman/physics). You should use Superset.sh for orchestration of task we can install Superset MCP (claude mcp add superset --transport http https://api.superset.sh/api/agent/mcp). To keep
+mulitiple agent runs from stepping on each other use superset.sh to isolate work in worktrees and merge them into the main worktree as necessary. Do we need to use Github to do this?
+
+STRICTLY FOLLOW THESE RULES:
+* Never write outside the local filesystem outside of /Users/ewasserman/dev/ewasserman/physics or tmp directories
+
