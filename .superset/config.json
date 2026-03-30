@@ -1,0 +1,5 @@
+{
+  "setup": ["cp \"$SUPERSET_ROOT_PATH/.mcp.json\" .mcp.json"],
+  "teardown": [],
+  "run": []
+}
