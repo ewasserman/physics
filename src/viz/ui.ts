@@ -16,6 +16,7 @@ export interface UIControls {
   onSeek: (frame: number) => void;
   onSpeedChange: (speed: number) => void;
   onDebugToggle: (show: boolean) => void;
+  onGravityChange: (g: number) => void;
   onToolChange: (tool: InteractionTool) => void;
   onDropTypeChange: (type: DropObjectType) => void;
   setActiveTool: (tool: InteractionTool) => void;
@@ -71,6 +72,26 @@ export function createControls(): UIControls {
     speedSelect.appendChild(opt);
   }
 
+  // Gravity selector
+  const gravitySelect = document.createElement('select');
+  gravitySelect.style.cssText = 'background: #444; color: #eee; border: 1px solid #666; padding: 2px 4px; border-radius: 3px;';
+  const gravityPresets: Array<{ label: string; value: number }> = [
+    { label: '0g', value: 0 },
+    { label: 'Moon', value: 1.62 },
+    { label: '0.5g', value: 4.905 },
+    { label: '1g', value: 9.81 },
+    { label: '2g', value: 19.62 },
+    { label: 'Jupiter', value: 24.79 },
+    { label: '-1g', value: -9.81 },
+  ];
+  for (const preset of gravityPresets) {
+    const opt = document.createElement('option');
+    opt.value = String(preset.value);
+    opt.textContent = preset.label;
+    if (preset.value === 9.81) opt.selected = true;
+    gravitySelect.appendChild(opt);
+  }
+
   // Timeline scrubber
   const scrubber = document.createElement('input');
   scrubber.type = 'range';
@@ -124,6 +145,7 @@ export function createControls(): UIControls {
   container.appendChild(frameLabel);
   container.appendChild(timeLabel);
   container.appendChild(speedSelect);
+  container.appendChild(gravitySelect);
   container.appendChild(scrubber);
   container.appendChild(debugLabel);
   container.appendChild(toolGroup);
@@ -148,6 +170,7 @@ export function createControls(): UIControls {
     onSeek: () => {},
     onSpeedChange: () => {},
     onDebugToggle: () => {},
+    onGravityChange: () => {},
     onToolChange: () => {},
     onDropTypeChange: () => {},
 
@@ -212,6 +235,10 @@ export function createControls(): UIControls {
 
   debugCheck.addEventListener('change', () => {
     controls.onDebugToggle(debugCheck.checked);
+  });
+
+  gravitySelect.addEventListener('change', () => {
+    controls.onGravityChange(parseFloat(gravitySelect.value));
   });
 
   for (const { tool } of tools) {

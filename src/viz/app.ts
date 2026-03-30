@@ -2,10 +2,11 @@ import { CanvasRenderer } from './renderer.js';
 import { PlaybackController } from './playback.js';
 import { LiveSimulation } from './live.js';
 import { createControls, UIControls } from './ui.js';
-import { demoBouncing, demoCarCrash, demoRain } from './demos.js';
+import { demoBouncing, demoCarCrash, demoRain, demoDoublePendulum, demoChain } from './demos.js';
 import { captureSnapshot } from '../sim/snapshot.js';
 import { InteractionManager, InteractionTool } from './interaction.js';
 import type { SimulationRecording } from '../sim/recording.js';
+import { Vec2 } from '../math/vec2.js';
 import type { Simulation } from '../sim/simulation.js';
 
 export interface AppOptions {
@@ -164,6 +165,11 @@ export function createApp(container: HTMLElement, options: AppOptions = {}): App
 
     controls.onSpeedChange = (speed: number) => {
       live.setSpeed(speed);
+    };
+
+    controls.onGravityChange = (g: number) => {
+      sim.config.gravity = new Vec2(0, -g);
+      sim.world.gravity = new Vec2(0, -g);
     };
 
     controls.onSeek = () => {

@@ -32,10 +32,12 @@
     <button id="demo-bouncing">Bouncing</button>
     <button id="demo-car">Car Crash</button>
     <button id="demo-rain">Rain</button>
+    <button id="demo-pendulum">Double Pendulum</button>
+    <button id="demo-chain">Chain</button>
   </div>
   <script type="module">
     import { createApp } from './src/viz/app.ts';
-    import { demoBouncing, demoCarCrash, demoRain } from './src/viz/demos.ts';
+    import { demoBouncing, demoCarCrash, demoRain, demoDoublePendulum, demoChain } from './src/viz/demos.ts';
 
     const container = document.getElementById('app');
     let app = createApp(container, { width: 800, height: 600, demo: 'bouncing' });
@@ -48,6 +50,12 @@
     });
     document.getElementById('demo-rain').addEventListener('click', () => {
       app.setLive(demoRain());
+    });
+    document.getElementById('demo-pendulum').addEventListener('click', () => {
+      app.setLive(demoDoublePendulum());
+    });
+    document.getElementById('demo-chain').addEventListener('click', () => {
+      app.setLive(demoChain());
     });
   </script>
 </body>

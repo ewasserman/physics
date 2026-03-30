@@ -2,9 +2,10 @@ import { Vec2 } from '../math/vec2.js';
 import { createSimulation, Simulation } from '../sim/simulation.js';
 import { createRigidBody } from '../core/body.js';
 import { createCircle, createAABB } from '../core/shape.js';
-import { addBody } from '../core/world.js';
+import { addBody, addConstraint } from '../core/world.js';
 import { createBoundary } from '../core/environment.js';
 import { createCar } from '../core/compound.js';
+import { createRevoluteConstraint } from '../core/constraint.js';
 
 /** 5 circles bouncing in a box. */
 export function demoBouncing(): Simulation {
@@ -94,6 +95,113 @@ export function demoRain(): Simulation {
     });
     addBody(sim.world, body);
   }
+
+  return sim;
+}
+
+/** Double pendulum — chaotic swinging from a fixed anchor. */
+export function demoDoublePendulum(): Simulation {
+  const sim = createSimulation({
+    gravity: new Vec2(0, -9.81),
+    floorY: -Infinity,
+  });
+
+  // Static anchor at top-center
+  const anchor = createRigidBody({
+    shape: createCircle(0.15),
+    position: new Vec2(0, 10),
+    mass: 0,
+  });
+  addBody(sim.world, anchor);
+
+  // First arm
+  const arm1 = createRigidBody({
+    shape: createCircle(0.4),
+    position: new Vec2(0, 8),
+    mass: 2,
+    restitution: 0.3,
+    friction: 0.2,
+  });
+  addBody(sim.world, arm1);
+
+  // Revolute constraint: anchor -> arm1
+  const joint1 = createRevoluteConstraint({
+    bodyA: anchor,
+    bodyB: arm1,
+    anchorA: Vec2.zero(),
+    anchorB: Vec2.zero(),
+    stiffness: 1.0,
+  });
+  addConstraint(sim.world, joint1);
+
+  // Second arm — offset to the right to start chaotic motion
+  const arm2 = createRigidBody({
+    shape: createCircle(0.4),
+    position: new Vec2(1, 6),
+    mass: 2,
+    restitution: 0.3,
+    friction: 0.2,
+    velocity: new Vec2(2, 0),
+  });
+  addBody(sim.world, arm2);
+
+  // Revolute constraint: arm1 -> arm2
+  const joint2 = createRevoluteConstraint({
+    bodyA: arm1,
+    bodyB: arm2,
+    anchorA: Vec2.zero(),
+    anchorB: Vec2.zero(),
+    stiffness: 1.0,
+  });
+  addConstraint(sim.world, joint2);
+
+  return sim;
+}
+
+/** Chain of circular links hanging from a fixed anchor. */
+export function demoChain(linkCount = 8, linkSize = 0.3): Simulation {
+  const sim = createSimulation({
+    gravity: new Vec2(0, -9.81),
+    floorY: -Infinity,
+  });
+
+  const anchorY = 12;
+
+  // Static anchor at top-center
+  const anchor = createRigidBody({
+    shape: createCircle(0.15),
+    position: new Vec2(0, anchorY),
+    mass: 0,
+  });
+  addBody(sim.world, anchor);
+
+  let prevBody = anchor;
+  const spacing = linkSize * 2.5;
+
+  for (let i = 0; i < linkCount; i++) {
+    const link = createRigidBody({
+      shape: createCircle(linkSize),
+      position: new Vec2(0, anchorY - (i + 1) * spacing),
+      mass: 1,
+      restitution: 0.3,
+      friction: 0.3,
+    });
+    addBody(sim.world, link);
+
+    const joint = createRevoluteConstraint({
+      bodyA: prevBody,
+      bodyB: link,
+      anchorA: Vec2.zero(),
+      anchorB: Vec2.zero(),
+      stiffness: 1.0,
+    });
+    addConstraint(sim.world, joint);
+
+    prevBody = link;
+  }
+
+  // Give the last link a nudge to start swinging
+  prevBody.velocity = new Vec2(3, 0);
 
   return sim;
 }
