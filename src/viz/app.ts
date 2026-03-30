@@ -4,6 +4,7 @@ import { LiveSimulation } from './live.js';
 import { createControls, UIControls } from './ui.js';
 import { demoBouncing, demoCarCrash, demoRain } from './demos.js';
 import { captureSnapshot } from '../sim/snapshot.js';
+import { InteractionManager, InteractionTool } from './interaction.js';
 import type { SimulationRecording } from '../sim/recording.js';
 import type { Simulation } from '../sim/simulation.js';
 
@@ -47,6 +48,8 @@ export function createApp(container: HTMLElement, options: AppOptions = {}): App
 
   // Create UI controls
   const controls = createControls();
+  controls.container.style.width = width + 'px';
+  controls.container.style.boxSizing = 'border-box';
   container.appendChild(controls.container);
 
   // App state
@@ -85,22 +88,40 @@ export function createApp(container: HTMLElement, options: AppOptions = {}): App
     setLive(sim);
   }
 
+  // Track canvas event listeners for cleanup between demos
+  let canvasMouseDown: ((e: MouseEvent) => void) | null = null;
+  let canvasMouseMove: ((e: MouseEvent) => void) | null = null;
+  let canvasMouseUp: ((e: MouseEvent) => void) | null = null;
+
+  function cleanupCanvasListeners() {
+    if (canvasMouseDown) { canvas.removeEventListener('mousedown', canvasMouseDown); canvasMouseDown = null; }
+    if (canvasMouseMove) { canvas.removeEventListener('mousemove', canvasMouseMove); canvasMouseMove = null; }
+    if (canvasMouseUp) { canvas.removeEventListener('mouseup', canvasMouseUp); canvasMouseUp = null; }
+  }
+
   function setLive(sim: Simulation) {
     // Cleanup previous
     if (app.live) app.live.pause();
     if (app.playback) app.playback.stop();
     app.playback = null;
+    cleanupCanvasListeners();
 
     controls.setMode('live');
 
     const live = new LiveSimulation(sim, renderer, { record: true });
     app.live = live;
 
-    let stepCount = 0;
+    // Wire up InteractionManager
+    const interactionManager = new InteractionManager(live, renderer);
+    controls.onToolChange = (tool) => interactionManager.setTool(tool);
+    controls.onDropTypeChange = (type) => { interactionManager.dropObjectType = type; };
 
-    // Update controls each frame via polling in the render
-    const origStart = live.start.bind(live);
-    const origPause = live.pause.bind(live);
+    canvasMouseDown = (e: MouseEvent) => interactionManager.onMouseDown(e.offsetX, e.offsetY);
+    canvasMouseMove = (e: MouseEvent) => interactionManager.onMouseMove(e.offsetX, e.offsetY);
+    canvasMouseUp = (e: MouseEvent) => interactionManager.onMouseUp(e.offsetX, e.offsetY);
+    canvas.addEventListener('mousedown', canvasMouseDown);
+    canvas.addEventListener('mousemove', canvasMouseMove);
+    canvas.addEventListener('mouseup', canvasMouseUp);
 
     // Use an interval to update the UI during live sim
     let uiInterval: ReturnType<typeof setInterval> | null = null;
@@ -108,8 +129,7 @@ export function createApp(container: HTMLElement, options: AppOptions = {}): App
     function startUI() {
       if (uiInterval) clearInterval(uiInterval);
       uiInterval = setInterval(() => {
-        const s = sim;
-        controls.update(s.stepCount, s.stepCount, s.world.time);
+        controls.update(sim.stepCount, sim.stepCount, sim.world.time);
       }, 100);
     }
 
@@ -142,8 +162,8 @@ export function createApp(container: HTMLElement, options: AppOptions = {}): App
       controls.update(sim.stepCount, sim.stepCount, sim.world.time);
     };
 
-    controls.onSpeedChange = () => {
-      // Speed changes don't apply directly to live mode
+    controls.onSpeedChange = (speed: number) => {
+      live.setSpeed(speed);
     };
 
     controls.onSeek = () => {
@@ -153,6 +173,7 @@ export function createApp(container: HTMLElement, options: AppOptions = {}): App
     // Auto-start
     live.start();
     startUI();
+    controls.setPlaying(true);
   }
 
   function setPlayback(recording: SimulationRecording) {

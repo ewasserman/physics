@@ -19,6 +19,7 @@ export interface UIControls {
   onToolChange: (tool: InteractionTool) => void;
   onDropTypeChange: (type: DropObjectType) => void;
   setActiveTool: (tool: InteractionTool) => void;
+  setPlaying: (playing: boolean) => void;
 }
 
 /**
@@ -155,6 +156,11 @@ export function createControls(): UIControls {
       updateToolButtons();
     },
 
+    setPlaying(playing: boolean) {
+      isPlaying = playing;
+      playBtn.textContent = isPlaying ? 'Pause' : 'Play';
+    },
+
     update(frame: number, totalFrames: number, time: number) {
       frameLabel.textContent = `Frame ${frame} / ${totalFrames}`;
       timeLabel.textContent = `t = ${time.toFixed(3)}s`;
@@ -165,6 +171,14 @@ export function createControls(): UIControls {
     setMode(mode: UIMode) {
       // Step only available in live mode
       stepBtn.style.display = mode === 'live' ? '' : 'none';
+      // Scrubber not meaningful in live mode
+      if (mode === 'live') {
+        scrubber.disabled = true;
+        scrubber.style.opacity = '0.4';
+      } else {
+        scrubber.disabled = false;
+        scrubber.style.opacity = '1';
+      }
     },
   };
 

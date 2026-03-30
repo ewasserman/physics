@@ -13,6 +13,7 @@ export class LiveSimulation {
   private lastTimestamp = 0;
   private accumulatedTime = 0;
   private recorder: SimulationRecorder | null = null;
+  private speed = 1;
 
   constructor(sim: Simulation, renderer: CanvasRenderer, options?: { record?: boolean }) {
     this.sim = sim;
@@ -23,6 +24,11 @@ export class LiveSimulation {
   }
 
   get isRunning(): boolean { return this._isRunning; }
+
+  /** Set simulation speed multiplier. */
+  setSpeed(s: number): void {
+    this.speed = s;
+  }
 
   /** Start the live simulation loop. */
   start(): void {
@@ -81,7 +87,7 @@ export class LiveSimulation {
     if (this.lastTimestamp > 0) {
       const realDelta = (timestamp - this.lastTimestamp) / 1000;
       // Cap delta to avoid spiral of death
-      this.accumulatedTime += Math.min(realDelta, 0.1);
+      this.accumulatedTime += Math.min(realDelta, 0.1) * this.speed;
 
       const dt = this.sim.config.dt;
       while (this.accumulatedTime >= dt) {
