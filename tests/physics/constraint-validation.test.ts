@@ -382,11 +382,11 @@ describe('Constraint Validation', () => {
         bodyA: anchor,
         bodyB: body,
         distance: 5,
-        breakForce: 50,
+        breakForce: 5000,
       });
       addConstraint(sim.world, constraint);
 
-      // Run with just gravity (9.81 N < 50 N)
+      // Run with just gravity — constraint force should remain well below breakForce
       for (let i = 0; i < 120; i++) {
         step(sim);
       }

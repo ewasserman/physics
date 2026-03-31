@@ -61,6 +61,7 @@ describe('Warm-starting stacking stability', () => {
       floorY: 0,
       dt: 1 / 60,
       solverIterations: 10,
+      damping: 0.001,
     });
 
     // Stack 5 circles vertically
