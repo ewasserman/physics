@@ -28,7 +28,7 @@ function createCollisionSim(opts: { dt?: number; solverIterations?: number } = {
     dt: opts.dt ?? 1 / 120,
     broadphaseCellSize: 8,
     solverIterations: opts.solverIterations ?? 8,
-    damping: 0,
+    damping: 0.001,
   });
 }
 

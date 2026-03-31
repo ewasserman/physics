@@ -14,6 +14,7 @@ describe('Stacking stability — final (post warm-starting)', () => {
       floorY: 0,
       dt: 1 / 120,
       solverIterations: 10,
+      damping: 0.001,
     });
 
     const radius = 0.5;
@@ -74,6 +75,7 @@ describe('Stacking stability — final (post warm-starting)', () => {
       floorY: 0,
       dt: 1 / 120,
       solverIterations: 10,
+      damping: 0.001,
     });
 
     const halfW = 0.5;
@@ -127,6 +129,7 @@ describe('Stacking stability — final (post warm-starting)', () => {
       floorY: 0,
       dt: 1 / 120,
       solverIterations: 10,
+      damping: 0.001,
     });
 
     const radius = 0.5;

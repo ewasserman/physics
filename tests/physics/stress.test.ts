@@ -23,7 +23,7 @@ describe('Stress: 50 circles dropped from various heights', () => {
       dt: 1 / 120,
       broadphaseCellSize: 4,
       solverIterations: 8,
-      damping: 0,
+      damping: 0.001,
     });
 
     // Create 50 circles at various heights and horizontal positions
@@ -82,7 +82,7 @@ describe('Stress: 50 circles dropped from various heights', () => {
       dt: 1 / 120,
       broadphaseCellSize: 4,
       solverIterations: 8,
-      damping: 0,
+      damping: 0.001,
     });
 
     for (let i = 0; i < 50; i++) {
@@ -120,7 +120,7 @@ describe('Stress: 20 circles in a small box', () => {
       dt: 1 / 120,
       broadphaseCellSize: 2,
       solverIterations: 12,
-      damping: 0,
+      damping: 0.001,
     });
 
     // Pack 20 circles into a small area (5m wide, stacking up)

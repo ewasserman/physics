@@ -6,7 +6,7 @@ import { applyGravity } from '../physics/forces.js';
 import { integrateWorld } from '../physics/integrator.js';
 import { detectAllCollisions, detectFloorCollisions, Contact } from '../physics/collision.js';
 import { resolveContact, resolveContacts } from '../physics/response.js';
-import { resolveConstraints } from '../physics/constraints.js';
+import { resolveConstraintsVelocity, resolveConstraintsPosition } from '../physics/constraints.js';
 import { SpatialHash } from '../physics/broadphase.js';
 import { ContactCache } from '../physics/warmstart.js';
 import { captureSnapshot, WorldSnapshot as SnapshotWorldSnapshot } from './snapshot.js';
@@ -81,7 +81,7 @@ export function createSimulation(config: Partial<SimulationConfig> = {}): Simula
  */
 export function step(sim: Simulation): void {
   const subDt = sim.config.dt / sim.config.substeps;
-  const damping = sim.config.damping > 0 ? (1 - sim.config.damping) : 0.999;
+  const damping = sim.config.damping > 0 ? (1 - sim.config.damping) : 1.0;
 
   let lastContacts: Contact[] = [];
 
@@ -100,12 +100,19 @@ export function step(sim: Simulation): void {
     // Pass contact cache for warm-starting and dt for velocity-level correction
     resolveContacts(contacts, sim.config.solverIterations, subDt, sim.contactCache);
 
-    // 5. Resolve constraints
+    // 5. Resolve constraints — split into velocity and position phases
+    //    Velocity phase: compute proper impulses with Baumgarte bias (energy-conserving)
+    //    Position phase: correct drift without touching velocities (no energy impact)
     if (sim.world.constraints.length > 0) {
-      const broken = resolveConstraints(
+      const broken = resolveConstraintsVelocity(
         sim.world.constraints,
         sim.config.solverIterations,
         subDt,
+      );
+
+      resolveConstraintsPosition(
+        sim.world.constraints,
+        sim.config.solverIterations,
       );
 
       // Remove broken constraints from the world
