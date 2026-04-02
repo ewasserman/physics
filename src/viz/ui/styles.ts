@@ -307,10 +307,14 @@ body {
   text-align: right;
 }
 
-.reset-btn {
-  display: block;
-  width: calc(100% - 32px);
-  margin: 12px 16px;
+.param-btn-row {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px;
+}
+
+.restart-btn, .reset-btn {
+  flex: 1;
   background: #2a3a5e;
   color: #d0d0e0;
   border: 1px solid #3a4a6e;
@@ -321,6 +325,16 @@ body {
   font-size: 12px;
   text-align: center;
   transition: background 0.1s;
+}
+
+.restart-btn {
+  background: #2a5e3a;
+  border-color: #3a6e4a;
+}
+
+.restart-btn:hover {
+  background: #3a6e4a;
+  color: #ffffff;
 }
 
 .reset-btn:hover {

@@ -5,7 +5,7 @@ import { createRigidBody, RigidBody } from '../../core/body.js';
 import { createCircle } from '../../core/shape.js';
 import { addBody, addConstraint } from '../../core/world.js';
 import { createBox } from '../../core/environment.js';
-import { createRevoluteConstraint } from '../../core/constraint.js';
+import { createRevoluteConstraint, createDistanceConstraint } from '../../core/constraint.js';
 
 registry.register({
   id: 'chain-fountain',
@@ -16,9 +16,10 @@ registry.register({
     {
       label: 'Beads',
       params: {
-        beadRadius: { type: 'number', label: 'Bead Radius', default: 0.25, min: 0.1, max: 0.6, step: 0.05 },
+        beadRadius: { type: 'number', label: 'Bead Radius', default: 0.15, min: 0.1, max: 0.6, step: 0.05 },
         beadMass: { type: 'number', label: 'Bead Mass', default: 0.5, min: 0.1, max: 2, step: 0.1 },
-        beadGap: { type: 'number', label: 'Bead Gap', default: 0.08, min: 0, max: 0.3, step: 0.01 },
+        beadGap: { type: 'number', label: 'Bead Gap', default: 0.1, min: 0, max: 0.3, step: 0.01 },
+        maxAngle: { type: 'number', label: 'Max Joint Angle (deg)', default: 60, min: 15, max: 90, step: 5 },
       },
     },
     {
@@ -154,14 +155,20 @@ registry.register({
       beads.push(bead);
 
       if (i > 0) {
+        // Model real bead chain: short rigid wire connects bead shells
+        // at their surfaces. Anchors are on the surface of each bead,
+        // pointing toward the neighbor. Distance = wire length (beadGap).
+        // This gives each bead a lever arm (full radius) for the kick.
         const delta = positions[i].sub(positions[i - 1]);
         const dir = delta.normalize();
-        const joint = createRevoluteConstraint({
+        const joint = createDistanceConstraint({
           bodyA: beads[i - 1],
           bodyB: bead,
           anchorA: dir.scale(v.beadRadius),
           anchorB: dir.scale(-v.beadRadius),
+          distance: v.beadGap,
           stiffness: 1.0,
+          maxAngle: v.maxAngle * Math.PI / 180,
         });
         addConstraint(sim.world, joint);
       }

@@ -11,6 +11,7 @@ export function renderParamPanel(
   container: HTMLElement,
   schema: ParamSchema,
   onChange: ParamChangeCallback,
+  onRestart?: () => void,
 ): ParamPanelController {
   container.innerHTML = '';
 
@@ -53,7 +54,21 @@ export function renderParamPanel(
     container.appendChild(details);
   }
 
-  // Reset button
+  // Button row
+  const btnRow = document.createElement('div');
+  btnRow.className = 'param-btn-row';
+
+  // Restart button — re-runs sim with current params
+  const restartBtn = document.createElement('button');
+  restartBtn.className = 'restart-btn';
+  restartBtn.textContent = 'Restart';
+  restartBtn.addEventListener('click', () => {
+    if (onRestart) onRestart();
+    else onChange(getValues());
+  });
+  btnRow.appendChild(restartBtn);
+
+  // Reset to Defaults button
   const resetBtn = document.createElement('button');
   resetBtn.className = 'reset-btn';
   resetBtn.textContent = 'Reset to Defaults';
@@ -64,7 +79,9 @@ export function renderParamPanel(
     }
     onChange(getValues());
   });
-  container.appendChild(resetBtn);
+  btnRow.appendChild(resetBtn);
+
+  container.appendChild(btnRow);
 
   function getValues(): Record<string, any> {
     return { ...values };

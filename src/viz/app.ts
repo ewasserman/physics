@@ -122,9 +122,11 @@ export function createApp(container: HTMLElement): App {
     activeDescriptor = descriptor;
     picker.setActive(id);
 
-    // Render param panel
+    // Render param panel with onChange (param changed) and onRestart (explicit restart)
     paramPanel = renderParamPanel(layout.sidebarRight, descriptor.params, (values) => {
       currentParamValues = values;
+      restartCurrentScenario();
+    }, () => {
       restartCurrentScenario();
     });
 

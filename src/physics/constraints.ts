@@ -209,7 +209,75 @@ function solveDistancePosition(c: DistanceConstraint): number {
     bodyB.position = bodyB.position.sub(normal.scale(correction * bodyB.inverseMass));
   }
 
+  // --- Angular limit enforcement ---
+  if (c.maxAngle !== undefined) {
+    solveAngleLimit(c);
+  }
+
   return Math.abs(error);
+}
+
+/**
+ * Enforce angular limits on a distance constraint.
+ *
+ * For three consecutive beads (prev → current → next), the angle at each
+ * joint should not deviate too far. We enforce this by checking the angle
+ * between the center-to-center direction and the wire (anchor-to-anchor)
+ * direction. When the wire bends too far from the center-to-center line,
+ * we push the bodies apart laterally to straighten the kink.
+ *
+ * This approach works with the distance solver instead of fighting it,
+ * because it moves body positions (not angles) and doesn't depend on
+ * body rotation (which is irrelevant for circles).
+ */
+function solveAngleLimit(c: DistanceConstraint): void {
+  const { bodyA, bodyB } = c;
+  const maxAngle = c.maxAngle!;
+  const correctionScale = 0.3;
+
+  // Center-to-center direction (the "straight" reference direction)
+  const centerDelta = bodyB.position.sub(bodyA.position);
+  const centerDist = centerDelta.length();
+  if (centerDist < 1e-10) return;
+  const centerDir = centerDelta.scale(1 / centerDist);
+
+  // Wire direction (anchor-to-anchor in world space)
+  const worldA = localToWorld(bodyA, c.anchorA);
+  const worldB = localToWorld(bodyB, c.anchorB);
+  const wireDelta = worldB.sub(worldA);
+  const wireLen = wireDelta.length();
+  if (wireLen < 1e-10) return;
+  const wireDir = wireDelta.scale(1 / wireLen);
+
+  // Angle between center-to-center and wire direction
+  const cosAngle = Math.max(-1, Math.min(1, centerDir.dot(wireDir)));
+  const angle = Math.acos(cosAngle);
+
+  if (angle <= maxAngle) return;
+
+  // The wire is bending too far from the center-to-center line.
+  // Compute the tangent (perpendicular to centerDir) component of wireDir.
+  // Push the bodies to reduce this tangent component.
+  const cross = centerDir.cross(wireDir);
+  const sign = cross >= 0 ? 1 : -1;
+
+  // Target: rotate wireDir toward centerDir by (angle - maxAngle)
+  const excessAngle = (angle - maxAngle) * correctionScale;
+
+  // Tangent direction (perpendicular to center-to-center line)
+  const tangent = new Vec2(-centerDir.y, centerDir.x).scale(sign);
+
+  // Push bodies apart along tangent to reduce the wire bend
+  const pushMag = Math.sin(excessAngle) * centerDist * 0.5;
+  const totalInvMass = bodyA.inverseMass + bodyB.inverseMass;
+  if (totalInvMass === 0) return;
+
+  if (!bodyA.isStatic) {
+    bodyA.position = bodyA.position.add(tangent.scale(pushMag * bodyA.inverseMass / totalInvMass));
+  }
+  if (!bodyB.isStatic) {
+    bodyB.position = bodyB.position.sub(tangent.scale(pushMag * bodyB.inverseMass / totalInvMass));
+  }
 }
 
 function solveRevolutePosition(c: RevoluteConstraint): number {

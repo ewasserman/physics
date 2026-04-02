@@ -23,6 +23,7 @@ export interface ConstraintBase {
 export interface DistanceConstraint extends ConstraintBase {
   type: ConstraintType.Distance;
   distance: number; // target distance
+  maxAngle?: number; // optional angular limit (radians) between surface normal and wire direction
 }
 
 /** Pins two bodies at a shared point; they rotate freely relative to each other. */
@@ -49,6 +50,7 @@ export interface CreateDistanceConstraintOptions {
   distance?: number;
   stiffness?: number;
   breakForce?: number;
+  maxAngle?: number;
 }
 
 /**
@@ -104,6 +106,7 @@ export function createDistanceConstraint(
     distance: dist,
     stiffness: opts.stiffness ?? 1.0,
     breakForce: opts.breakForce,
+    maxAngle: opts.maxAngle,
     broken: false,
   };
 }
