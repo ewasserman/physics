@@ -62,9 +62,6 @@ export function createApp(container: HTMLElement): App {
   });
   resizeObserver.observe(layout.canvasWrapper);
 
-  // Initial resize
-  requestAnimationFrame(() => resizeCanvas());
-
   // Build toolbar
   const toolbar = renderToolbar(layout.toolbar);
 
@@ -282,11 +279,15 @@ export function createApp(container: HTMLElement): App {
     }
   });
 
-  // Load default scenario
-  const allScenarios = registry.getAll();
-  if (allScenarios.length > 0) {
-    loadScenario(allScenarios[0].id);
-  }
+  // Defer initial scenario load until canvas is sized.
+  // ResizeObserver fires asynchronously, so the canvas is 0x0 at this point.
+  requestAnimationFrame(() => {
+    resizeCanvas();
+    const allScenarios = registry.getAll();
+    if (allScenarios.length > 0) {
+      loadScenario(allScenarios[0].id);
+    }
+  });
 
   return app;
 }
