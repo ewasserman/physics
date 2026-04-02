@@ -3,68 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Physics Simulation Viewer</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      display: flex; flex-direction: column; align-items: center;
-      min-height: 100vh; background: #1a1a1a; color: #eee;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace;
-      padding: 20px;
-    }
-    h1 { margin-bottom: 12px; font-size: 18px; font-weight: 500; color: #aaa; }
-    #app { border-radius: 4px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.5); }
-    .demo-bar {
-      margin-top: 12px; display: flex; gap: 8px;
-    }
-    .demo-bar button {
-      background: #333; color: #ccc; border: 1px solid #555;
-      padding: 6px 16px; border-radius: 3px; cursor: pointer;
-      font-family: monospace; font-size: 13px;
-    }
-    .demo-bar button:hover { background: #444; color: #fff; }
-  </style>
+  <title>Physics Simulation</title>
 </head>
 <body>
-  <h1>Physics Simulation</h1>
   <div id="app"></div>
-  <div class="demo-bar">
-    <button id="demo-bouncing">Bouncing</button>
-    <button id="demo-car">Car Crash</button>
-    <button id="demo-rain">Rain</button>
-    <button id="demo-pendulum">Double Pendulum</button>
-    <button id="demo-chain">Chain</button>
-    <button id="demo-fountain">Chain Fountain</button>
-  </div>
   <script type="module">
     import { createApp } from './src/viz/app.ts';
-    import { demoBouncing, demoCarCrash, demoRain, demoDoublePendulum, demoChain, demoChainFountain } from './src/viz/demos.ts';
-
     const container = document.getElementById('app');
-    let app = createApp(container, { width: 800, height: 600, demo: 'bouncing' });
-
-    document.getElementById('demo-bouncing').addEventListener('click', () => {
-      app.setLive(demoBouncing());
-    });
-    document.getElementById('demo-car').addEventListener('click', () => {
-      app.setLive(demoCarCrash());
-    });
-    document.getElementById('demo-rain').addEventListener('click', () => {
-      app.setLive(demoRain());
-    });
-    document.getElementById('demo-pendulum').addEventListener('click', () => {
-      app.setLive(demoDoublePendulum());
-      // Center camera on the pivot (0,0), not the initial body bounding box
-      const totalArm = 2.4 + 2 + 1; // arm1 + arm2 + padding
-      const zoom = Math.min(800, 600) / (totalArm * 2);
-      app.renderer.setCamera(0, 0, zoom);
-    });
-    document.getElementById('demo-chain').addEventListener('click', () => {
-      app.setLive(demoChain());
-    });
-    document.getElementById('demo-fountain').addEventListener('click', () => {
-      app.setLive(demoChainFountain());
-    });
+    const app = createApp(container);
   </script>
 </body>
 </html>

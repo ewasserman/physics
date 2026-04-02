@@ -1,121 +1,191 @@
 import { CanvasRenderer } from './renderer.js';
 import { PlaybackController } from './playback.js';
 import { LiveSimulation } from './live.js';
-import { createControls, UIControls } from './ui.js';
-import { demoBouncing, demoCarCrash, demoRain, demoDoublePendulum, demoChain, demoChainFountain } from './demos.js';
-import { captureSnapshot } from '../sim/snapshot.js';
 import { InteractionManager, InteractionTool } from './interaction.js';
-import type { SimulationRecording } from '../sim/recording.js';
+import { captureSnapshot } from '../sim/snapshot.js';
 import { Vec2 } from '../math/vec2.js';
 import type { Simulation } from '../sim/simulation.js';
+import type { SimulationRecording } from '../sim/recording.js';
 
-export interface AppOptions {
-  /** Canvas width in pixels. */
-  width?: number;
-  /** Canvas height in pixels. */
-  height?: number;
-  /** Which demo to run by default. */
-  demo?: 'bouncing' | 'carCrash' | 'rain';
-  /** Start in playback mode with a recording. */
-  recording?: SimulationRecording;
-}
+// UI components
+import { injectStyles } from './ui/styles.js';
+import { buildLayout, LayoutRefs } from './ui/layout.js';
+import { renderParamPanel, ParamPanelController } from './ui/param-panel.js';
+import { renderScenarioPicker, ScenarioPickerController } from './ui/scenario-picker.js';
+import { renderToolbar, ToolbarController } from './ui/toolbar.js';
+
+// Scenario system
+import { registry } from './scenarios/index.js';
+import type { ScenarioDescriptor } from './scenarios/types.js';
 
 export interface App {
   canvas: HTMLCanvasElement;
   renderer: CanvasRenderer;
-  controls: UIControls;
   live: LiveSimulation | null;
   playback: PlaybackController | null;
   /** Switch to live mode with a new simulation. */
   setLive(sim: Simulation): void;
   /** Switch to playback mode with a recording. */
   setPlayback(recording: SimulationRecording): void;
+  /** Load a scenario by id with optional param overrides. */
+  loadScenario(id: string, paramOverrides?: Record<string, any>): void;
 }
 
 /** Mount the visualization app into a container element. */
-export function createApp(container: HTMLElement, options: AppOptions = {}): App {
-  const width = options.width ?? 800;
-  const height = options.height ?? 600;
+export function createApp(container: HTMLElement): App {
+  // Inject CSS and build layout
+  injectStyles();
+  const layout = buildLayout(container);
 
-  // Create canvas
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  canvas.style.cssText = 'display: block; background: #f8f8f8; border-radius: 4px 4px 0 0;';
-  container.appendChild(canvas);
+  // Create canvas renderer
+  const renderer = new CanvasRenderer(layout.canvas);
 
-  // Create renderer
-  const renderer = new CanvasRenderer(canvas);
+  // Resize canvas to fill its wrapper
+  function resizeCanvas() {
+    const rect = layout.canvasWrapper.getBoundingClientRect();
+    const w = Math.floor(rect.width);
+    const h = Math.floor(rect.height);
+    if (w > 0 && h > 0) {
+      layout.canvas.width = w;
+      layout.canvas.height = h;
+    }
+  }
 
-  // Create UI controls
-  const controls = createControls();
-  controls.container.style.width = width + 'px';
-  controls.container.style.boxSizing = 'border-box';
-  container.appendChild(controls.container);
+  // ResizeObserver for dynamic canvas sizing
+  const resizeObserver = new ResizeObserver(() => {
+    resizeCanvas();
+    if (app.live && app.live.isRunning) {
+      const sim = app.live.getSimulation();
+      const snapshot = captureSnapshot(sim);
+      renderer.renderFrame(snapshot);
+    }
+  });
+  resizeObserver.observe(layout.canvasWrapper);
+
+  // Initial resize
+  requestAnimationFrame(() => resizeCanvas());
+
+  // Build toolbar
+  const toolbar = renderToolbar(layout.toolbar);
+
+  // Build scenario picker
+  const picker = renderScenarioPicker(layout.sidebarLeft, registry, (id) => {
+    loadScenario(id);
+  });
+
+  // Param panel state
+  let paramPanel: ParamPanelController | null = null;
+  let activeScenarioId: string | null = null;
+  let activeDescriptor: ScenarioDescriptor | null = null;
+  let currentParamValues: Record<string, any> = {};
 
   // App state
   const app: App = {
-    canvas,
+    canvas: layout.canvas,
     renderer,
-    controls,
     live: null,
     playback: null,
     setLive,
     setPlayback,
+    loadScenario,
   };
 
-  // Wire up debug toggle
-  controls.onDebugToggle = (show: boolean) => {
+  // Track canvas event listeners for cleanup
+  let canvasMouseDown: ((e: MouseEvent) => void) | null = null;
+  let canvasMouseMove: ((e: MouseEvent) => void) | null = null;
+  let canvasMouseUp: ((e: MouseEvent) => void) | null = null;
+
+  function cleanupCanvasListeners() {
+    if (canvasMouseDown) { layout.canvas.removeEventListener('mousedown', canvasMouseDown); canvasMouseDown = null; }
+    if (canvasMouseMove) { layout.canvas.removeEventListener('mousemove', canvasMouseMove); canvasMouseMove = null; }
+    if (canvasMouseUp) { layout.canvas.removeEventListener('mouseup', canvasMouseUp); canvasMouseUp = null; }
+  }
+
+  // Wire debug toggle
+  toolbar.callbacks.onDebugToggle = (show: boolean) => {
     renderer.setShowContacts(show);
-    // Re-render current frame if in playback
     if (app.playback) {
       const frame = app.playback.getCurrentFrame();
       app.playback.setFrame(frame);
     }
   };
 
-  // Track canvas event listeners for cleanup between demos
-  let canvasMouseDown: ((e: MouseEvent) => void) | null = null;
-  let canvasMouseMove: ((e: MouseEvent) => void) | null = null;
-  let canvasMouseUp: ((e: MouseEvent) => void) | null = null;
+  // --- Load scenario ---
+  function loadScenario(id: string, paramOverrides?: Record<string, any>) {
+    const descriptor = registry.get(id);
+    if (!descriptor) {
+      console.warn(`Scenario "${id}" not found`);
+      return;
+    }
 
-  function cleanupCanvasListeners() {
-    if (canvasMouseDown) { canvas.removeEventListener('mousedown', canvasMouseDown); canvasMouseDown = null; }
-    if (canvasMouseMove) { canvas.removeEventListener('mousemove', canvasMouseMove); canvasMouseMove = null; }
-    if (canvasMouseUp) { canvas.removeEventListener('mouseup', canvasMouseUp); canvasMouseUp = null; }
+    activeScenarioId = id;
+    activeDescriptor = descriptor;
+    picker.setActive(id);
+
+    // Render param panel
+    paramPanel = renderParamPanel(layout.sidebarRight, descriptor.params, (values) => {
+      currentParamValues = values;
+      restartCurrentScenario();
+    });
+
+    if (paramOverrides) {
+      paramPanel.setValues(paramOverrides);
+      currentParamValues = paramPanel.getValues();
+    } else {
+      currentParamValues = paramPanel.getValues();
+    }
+
+    const sim = descriptor.setup(currentParamValues);
+    setLive(sim);
+    applyCamera(descriptor);
   }
 
+  function restartCurrentScenario() {
+    if (!activeDescriptor) return;
+    const sim = activeDescriptor.setup(currentParamValues);
+    setLive(sim);
+    applyCamera(activeDescriptor);
+  }
+
+  function applyCamera(descriptor: ScenarioDescriptor) {
+    if (descriptor.camera && descriptor.camera.mode === 'manual') {
+      const cam = descriptor.camera;
+      const totalArm = (currentParamValues.armLen1 ?? 2.4) + (currentParamValues.armLen2 ?? 2) + 1;
+      const zoom = cam.zoom || Math.min(layout.canvas.width, layout.canvas.height) / (totalArm * 2);
+      renderer.setCamera(cam.cx ?? 0, cam.cy ?? 0, zoom);
+    }
+  }
+
+  // --- setLive ---
   function setLive(sim: Simulation) {
-    // Cleanup previous
     if (app.live) app.live.pause();
     if (app.playback) app.playback.stop();
     app.playback = null;
     cleanupCanvasListeners();
 
-    controls.setMode('live');
+    toolbar.setMode('live');
 
     const live = new LiveSimulation(sim, renderer, { record: true });
     app.live = live;
 
-    // Wire up InteractionManager
+    // Wire interaction manager
     const interactionManager = new InteractionManager(live, renderer);
-    controls.onToolChange = (tool) => interactionManager.setTool(tool);
-    controls.onDropTypeChange = (type) => { interactionManager.dropObjectType = type; };
+    toolbar.callbacks.onToolChange = (tool) => interactionManager.setTool(tool);
+    toolbar.callbacks.onDropTypeChange = (type) => { interactionManager.dropObjectType = type; };
 
     canvasMouseDown = (e: MouseEvent) => interactionManager.onMouseDown(e.offsetX, e.offsetY);
     canvasMouseMove = (e: MouseEvent) => interactionManager.onMouseMove(e.offsetX, e.offsetY);
     canvasMouseUp = (e: MouseEvent) => interactionManager.onMouseUp(e.offsetX, e.offsetY);
-    canvas.addEventListener('mousedown', canvasMouseDown);
-    canvas.addEventListener('mousemove', canvasMouseMove);
-    canvas.addEventListener('mouseup', canvasMouseUp);
+    layout.canvas.addEventListener('mousedown', canvasMouseDown);
+    layout.canvas.addEventListener('mousemove', canvasMouseMove);
+    layout.canvas.addEventListener('mouseup', canvasMouseUp);
 
-    // Use an interval to update the UI during live sim
     let uiInterval: ReturnType<typeof setInterval> | null = null;
 
     function startUI() {
       if (uiInterval) clearInterval(uiInterval);
       uiInterval = setInterval(() => {
-        controls.update(sim.stepCount, sim.stepCount, sim.world.time);
+        toolbar.update(sim.stepCount, sim.stepCount, sim.world.time);
       }, 100);
     }
 
@@ -123,7 +193,7 @@ export function createApp(container: HTMLElement, options: AppOptions = {}): App
       if (uiInterval) { clearInterval(uiInterval); uiInterval = null; }
     }
 
-    controls.onPlay = () => {
+    toolbar.callbacks.onPlay = () => {
       if (!live.isRunning) {
         live.resume();
         if (sim.stepCount === 0) live.start();
@@ -131,90 +201,89 @@ export function createApp(container: HTMLElement, options: AppOptions = {}): App
       }
     };
 
-    controls.onPause = () => {
+    toolbar.callbacks.onPause = () => {
       live.pause();
       stopUI();
-      controls.update(sim.stepCount, sim.stepCount, sim.world.time);
+      toolbar.update(sim.stepCount, sim.stepCount, sim.world.time);
     };
 
-    controls.onStop = () => {
+    toolbar.callbacks.onStop = () => {
       live.pause();
       stopUI();
-      controls.update(0, 0, 0);
+      toolbar.update(0, 0, 0);
     };
 
-    controls.onStep = () => {
+    toolbar.callbacks.onStep = () => {
       live.step();
-      controls.update(sim.stepCount, sim.stepCount, sim.world.time);
+      toolbar.update(sim.stepCount, sim.stepCount, sim.world.time);
     };
 
-    controls.onSpeedChange = (speed: number) => {
+    toolbar.callbacks.onSpeedChange = (speed: number) => {
       live.setSpeed(speed);
     };
 
-    controls.onGravityChange = (g: number) => {
-      sim.config.gravity = new Vec2(0, -g);
-      sim.world.gravity = new Vec2(0, -g);
-    };
-
-    controls.onSeek = () => {
-      // Seeking not supported in live mode
-    };
+    toolbar.callbacks.onSeek = () => {};
 
     // Auto-start
     live.start();
     startUI();
-    controls.setPlaying(true);
+    toolbar.setPlaying(true);
   }
 
+  // --- setPlayback ---
   function setPlayback(recording: SimulationRecording) {
-    // Cleanup previous
     if (app.live) app.live.pause();
     app.live = null;
 
-    controls.setMode('playback');
+    toolbar.setMode('playback');
 
     const playback = new PlaybackController(recording);
     app.playback = playback;
 
-    // Auto-fit to first frame
     if (recording.snapshots.length > 0) {
       renderer.autoFit(recording.snapshots[0].bodies);
     }
 
     playback.onFrame((snapshot) => {
       renderer.renderFrame(snapshot);
-      controls.update(
+      toolbar.update(
         playback.getCurrentFrame(),
         playback.getTotalFrames(),
         snapshot.time,
       );
     });
 
-    controls.onPlay = () => { playback.play(); };
-    controls.onPause = () => { playback.pause(); };
-    controls.onStop = () => { playback.stop(); };
-    controls.onStep = () => {};
-    controls.onSeek = (frame: number) => { playback.setFrame(frame); };
-    controls.onSpeedChange = (speed: number) => { playback.setSpeed(speed); };
+    toolbar.callbacks.onPlay = () => { playback.play(); };
+    toolbar.callbacks.onPause = () => { playback.pause(); };
+    toolbar.callbacks.onStop = () => { playback.stop(); };
+    toolbar.callbacks.onStep = () => {};
+    toolbar.callbacks.onSeek = (frame: number) => { playback.setFrame(frame); };
+    toolbar.callbacks.onSpeedChange = (speed: number) => { playback.setSpeed(speed); };
 
-    // Show first frame
     playback.setFrame(0);
-    controls.update(0, playback.getTotalFrames(), recording.snapshots[0]?.time ?? 0);
+    toolbar.update(0, playback.getTotalFrames(), recording.snapshots[0]?.time ?? 0);
   }
 
-  // Load a recording for playback, or start a live demo
-  if (options.recording) {
-    setPlayback(options.recording);
-  } else {
-    const demoName = options.demo ?? 'bouncing';
-    let sim: Simulation;
-    switch (demoName) {
-      case 'carCrash': sim = demoCarCrash(); break;
-      case 'rain': sim = demoRain(); break;
-      default: sim = demoBouncing(); break;
+  // --- Keyboard shortcuts ---
+  document.addEventListener('keydown', (e) => {
+    if (e.code === 'Space' && e.target === document.body) {
+      e.preventDefault();
+      if (app.live) {
+        if (app.live.isRunning) {
+          toolbar.callbacks.onPause();
+          toolbar.setPlaying(false);
+        } else {
+          toolbar.callbacks.onPlay();
+          toolbar.setPlaying(true);
+        }
+      }
     }
-    setLive(sim);
+  });
+
+  // Load default scenario
+  const allScenarios = registry.getAll();
+  if (allScenarios.length > 0) {
+    loadScenario(allScenarios[0].id);
   }
 
   return app;
