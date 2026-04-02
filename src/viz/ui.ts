@@ -52,13 +52,13 @@ export function createControls(): UIControls {
 
   // Frame counter
   const frameLabel = document.createElement('span');
-  frameLabel.textContent = 'Frame 0 / 0';
-  frameLabel.style.cssText = 'min-width: 120px;';
+  frameLabel.textContent = 'Step 0';
+  frameLabel.style.cssText = 'width: 140px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
 
   // Time display
   const timeLabel = document.createElement('span');
   timeLabel.textContent = 't = 0.000s';
-  timeLabel.style.cssText = 'min-width: 90px;';
+  timeLabel.style.cssText = 'width: 100px; display: inline-block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
 
   // Speed selector
   const speedSelect = document.createElement('select');
@@ -152,6 +152,7 @@ export function createControls(): UIControls {
   container.appendChild(dropTypeSelect);
 
   let isPlaying = false;
+  let currentMode: UIMode = 'live';
 
   let activeTool = InteractionTool.Select;
 
@@ -185,13 +186,18 @@ export function createControls(): UIControls {
     },
 
     update(frame: number, totalFrames: number, time: number) {
-      frameLabel.textContent = `Frame ${frame} / ${totalFrames}`;
+      if (currentMode === 'live') {
+        frameLabel.textContent = `Step ${frame}`;
+      } else {
+        frameLabel.textContent = `Frame ${frame} / ${totalFrames}`;
+      }
       timeLabel.textContent = `t = ${time.toFixed(3)}s`;
       scrubber.max = String(Math.max(0, totalFrames - 1));
       scrubber.value = String(frame);
     },
 
     setMode(mode: UIMode) {
+      currentMode = mode;
       // Step only available in live mode
       stepBtn.style.display = mode === 'live' ? '' : 'none';
       // Scrubber not meaningful in live mode

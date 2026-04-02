@@ -34,10 +34,11 @@
     <button id="demo-rain">Rain</button>
     <button id="demo-pendulum">Double Pendulum</button>
     <button id="demo-chain">Chain</button>
+    <button id="demo-fountain">Chain Fountain</button>
   </div>
   <script type="module">
     import { createApp } from './src/viz/app.ts';
-    import { demoBouncing, demoCarCrash, demoRain, demoDoublePendulum, demoChain } from './src/viz/demos.ts';
+    import { demoBouncing, demoCarCrash, demoRain, demoDoublePendulum, demoChain, demoChainFountain } from './src/viz/demos.ts';
 
     const container = document.getElementById('app');
     let app = createApp(container, { width: 800, height: 600, demo: 'bouncing' });
@@ -53,9 +54,16 @@
     });
     document.getElementById('demo-pendulum').addEventListener('click', () => {
       app.setLive(demoDoublePendulum());
+      // Center camera on the pivot (0,0), not the initial body bounding box
+      const totalArm = 2.4 + 2 + 1; // arm1 + arm2 + padding
+      const zoom = Math.min(800, 600) / (totalArm * 2);
+      app.renderer.setCamera(0, 0, zoom);
     });
     document.getElementById('demo-chain').addEventListener('click', () => {
       app.setLive(demoChain());
+    });
+    document.getElementById('demo-fountain').addEventListener('click', () => {
+      app.setLive(demoChainFountain());
     });
   </script>
 </body>

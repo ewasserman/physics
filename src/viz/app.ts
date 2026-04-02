@@ -2,7 +2,7 @@ import { CanvasRenderer } from './renderer.js';
 import { PlaybackController } from './playback.js';
 import { LiveSimulation } from './live.js';
 import { createControls, UIControls } from './ui.js';
-import { demoBouncing, demoCarCrash, demoRain, demoDoublePendulum, demoChain } from './demos.js';
+import { demoBouncing, demoCarCrash, demoRain, demoDoublePendulum, demoChain, demoChainFountain } from './demos.js';
 import { captureSnapshot } from '../sim/snapshot.js';
 import { InteractionManager, InteractionTool } from './interaction.js';
 import type { SimulationRecording } from '../sim/recording.js';
@@ -73,21 +73,6 @@ export function createApp(container: HTMLElement, options: AppOptions = {}): App
       app.playback.setFrame(frame);
     }
   };
-
-  // Load a recording for playback
-  if (options.recording) {
-    setPlayback(options.recording);
-  } else {
-    // Start a demo in live mode
-    const demoName = options.demo ?? 'bouncing';
-    let sim: Simulation;
-    switch (demoName) {
-      case 'carCrash': sim = demoCarCrash(); break;
-      case 'rain': sim = demoRain(); break;
-      default: sim = demoBouncing(); break;
-    }
-    setLive(sim);
-  }
 
   // Track canvas event listeners for cleanup between demos
   let canvasMouseDown: ((e: MouseEvent) => void) | null = null;
@@ -216,6 +201,20 @@ export function createApp(container: HTMLElement, options: AppOptions = {}): App
     // Show first frame
     playback.setFrame(0);
     controls.update(0, playback.getTotalFrames(), recording.snapshots[0]?.time ?? 0);
+  }
+
+  // Load a recording for playback, or start a live demo
+  if (options.recording) {
+    setPlayback(options.recording);
+  } else {
+    const demoName = options.demo ?? 'bouncing';
+    let sim: Simulation;
+    switch (demoName) {
+      case 'carCrash': sim = demoCarCrash(); break;
+      case 'rain': sim = demoRain(); break;
+      default: sim = demoBouncing(); break;
+    }
+    setLive(sim);
   }
 
   return app;

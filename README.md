@@ -24,6 +24,8 @@ npm run dev
 
 Open the URL in your browser. Choose a demo (Bouncing, Car Crash, or Rain) to launch a live simulation.
 
+Press `Ctrl+C` in the terminal to stop the dev server.
+
 ## Scripts
 
 | Command | Description |
