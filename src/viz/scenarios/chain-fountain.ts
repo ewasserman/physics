@@ -66,7 +66,7 @@ registry.register({
 
     // Lip
     const lipRadius = 0.6;
-    const lipCenter = new Vec2(cHalfW + wallThick / 2, cTop);
+    const lipCenter = new Vec2(cHalfW + wallThick / 2 + lipRadius - wallThick / 2, cTop);
     const lip = createRigidBody({
       shape: createCircle(lipRadius),
       position: lipCenter,
